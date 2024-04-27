@@ -1,11 +1,8 @@
-Log in to the lab servers using the credentials provided:
 
-ssh cloud_user@<PUBLIC_IP_ADDRESS>
-Install Packages
 
 Log in to the control plane node.
 
-Note: The following steps must be performed on all three nodes.
+Note: The following steps must be performed on all  nodes ( master + worker) .
 
 Create the configuration file for containerd:
 
@@ -18,6 +15,24 @@ Load the modules:
 sudo modprobe overlay
 sudo modprobe br_netfilter
 Set the system configurations for Kubernetes networking:
+
+#########This step involves creating a configuration file named containerd.conf in the directory /etc/modules-load.d/. This file will contain two module names: overlay and br_netfilter.
+The overlay module is used for overlay filesystem support, which is a requirement for container runtimes like containerd to provide container isolation.
+The br_netfilter module is for bridged networking support. This module is needed because Kubernetes uses bridged networking to connect containers running on different nodes.
+Loading the modules:
+After creating the configuration file, you need to load the modules mentioned in the configuration file using the modprobe command.
+modprobe overlay and modprobe br_netfilter are used to load the overlay and br_netfilter modules respectively.
+Setting the system configurations for Kubernetes networking:
+This step involves configuring certain kernel parameters related to networking. These configurations are essential for Kubernetes to function properly.
+A configuration file named 99-kubernetes-cri.conf is created in the directory /etc/sysctl.d/. This file contains three key parameters related to network bridging and IP forwarding.
+net.bridge.bridge-nf-call-iptables = 1: This parameter enables bridged network traffic to be processed by iptables. This is essential for Kubernetes networking as it relies on iptables for network address translation (NAT) and filtering.
+net.ipv4.ip_forward = 1: This parameter enables IP forwarding, allowing packets to pass through the node from one network interface to another.
+net.bridge.bridge-nf-call-ip6tables = 1: Similar to the first parameter but for IPv6 traffic.
+Applying the new settings:
+After creating the configuration file for the kernel parameters, you need to apply these settings to the system.
+This is typically done by reloading the sysctl settings using the sysctl --system 
+#########
+#########
 
 cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes-cri.conf
 net.bridge.bridge-nf-call-iptables = 1
@@ -57,7 +72,58 @@ cat <<EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
 deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.27/deb/ /
 EOF
 Update the package listings:
+####
+####
+####
+####
+####
+#####
 
+
+Create the containerd configuration directory:
+This command creates the directory /etc/containerd using sudo mkdir -p /etc/containerd. The -p option ensures that the command creates parent directories as needed.
+Generate the default containerd configuration:
+This command generates the default configuration for containerd and saves it to the file /etc/containerd/config.toml.
+sudo containerd config default | sudo tee /etc/containerd/config.toml:
+sudo is used to run the containerd command with elevated privileges.
+containerd config default generates the default configuration for containerd.
+tee is used to write the output to a file and also display it on the terminal.
+/etc/containerd/config.toml is the path where the configuration file is saved.
+Restart containerd:
+This command restarts the containerd service to apply the new configuration.
+sudo systemctl restart containerd:
+sudo is used to run the command with elevated privileges.
+systemctl restart containerd restarts the containerd service.
+Verify that containerd is running:
+This command checks the status of the containerd service to ensure that it is running properly.
+sudo systemctl status containerd:
+sudo is used to run the command with elevated privileges.
+systemctl status containerd displays the status of the containerd service.
+Disable swap:
+This command disables swap space on the system. Kubernetes requires swap to be disabled to ensure optimal performance and stability.
+sudo swapoff -a:
+sudo is used to run the command with elevated privileges.
+swapoff -a disables all swap devices and files.
+Install dependency packages:
+These commands update the package list (apt-get update) and install necessary packages (apt-get install -y apt-transport-https curl).
+apt-get update updates the package list to the latest versions available.
+apt-get install -y apt-transport-https curl installs the apt-transport-https package (required for accessing repositories over HTTPS) and curl (used for downloading files over the internet).
+Download and add the GPG key:
+This command downloads the GPG key for the Kubernetes repository and adds it to the system's keyring.
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.27/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg:
+curl is used to download the GPG key from the specified URL.
+sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg converts the key to the appropriate format and saves it to the specified location.
+Add Kubernetes to the repository list:
+This command adds the Kubernetes repository to the system's list of package sources.
+cat <<EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list:
+cat <<EOF is a heredoc construct used to input multiple lines of text.
+sudo tee /etc/apt/sources.list.d/kubernetes.list writes the input text to the specified file.
+The text input specifies the Kubernetes repository URL and GPG keyring path.
+####
+####
+####
+####
+#####
 sudo apt-get update
 Install Kubernetes packages:
 
